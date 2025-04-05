@@ -1,0 +1,200 @@
+library(shiny)
+library(janitor)
+library(ggplot2)
+library(forcats)
+library(shinythemes)
+library(readxl)
+library(dplyr)
+library(stringr)
+#Set Working Directory 
+ui=fluidPage(
+  titlePanel("GoDaddy Survey Business Insights"),
+  sidebarLayout( 
+    sidebarPanel( width = 3,
+      selectInput("category","Graph 1: Select Category",choices = c('(1) Management, business or financial services',
+                                                                  '(2) Professional, legal and educational services',
+                                                                  '(3) Health care services',
+                                                                  '(4) Security, building maintenance, or groundskeeping services',
+                                                                  '(5) Food services',
+                                                                  '(6) Personal care services',
+                                                                  '(7) Sales',
+                                                                  '(8) Office and administrative support',
+                                                                  '(9) Construction or mining',
+                                                                  '(10) Installation, maintenance and repair',
+                                                                  '(11) Production',
+                                                                  '(12) Transportation and material moving',
+                                                                  '(13) Agriculture or forestry',
+                                                                  '(14) Other',
+                                                                  'Missing')),
+      radioButtons("range.views","Graph 2: Select the Range of Views",choices = c("1-10" = "(2) 1-10",
+                                                                         "11-100" ="(4) 11-100",
+                                                                         "101-1000"="(5) 101-1000",
+                                                                         "1,001-10,000"="(8) 1,001-10,000",
+                                                                         "More than 10,000"="(10) More than 10,000")),
+      sliderInput("rating","Graph 3: Select the Rating",min=0,max=10,value=10,step = 1),
+      selectInput("mode", "Graph 4: Select Business Mode", choices = c("Online" = "(1) Only online",
+                                                      "Offline" = "(2) Only in a physical location",
+                                                      "Hybrid"="(3) Both online and in a physical location",
+                                                      "Don't Know"="(-9) Don't know",
+                                                      "Missing"="(-7) Missing")),
+    ),
+    mainPanel(
+      fluidRow(
+        column(12,plotOutput("barchart"))),
+      fluidRow(
+        column(6,plotOutput("cat.chart")),
+        column(6,plotOutput("ratingchart"))),
+      fluidRow(
+        column(12,plotOutput("mode.chart"))),
+    )
+  ))
+
+server=function(input,output,session){
+  #Graph 1. Barchart: Customers Segmentation by Capital Investment and Business Category
+  
+  data <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Data")
+  values1 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                        range = "B37:C50", col_names = c("q5c","category"))
+  values2 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                        range = "B51:C61", col_names = c("q5d","range"))
+  
+  data= merge(data,values1, by="q5c",all.x = T)
+  data$category=ifelse(data$q5c==-7,"(-7) Missing",as.character(data$category))
+  data=merge(data,values2,by="q5d",all.x = T)
+  
+  data$q5d <-as.character(data$q5d)
+  data$range=ifelse(data$q5d==-9, "(-9) Don't know",
+                    ifelse(data$q5d==-8, "(-8) Prefer not to answer",
+                           ifelse(data$q5d==-7, "(-7) Missing",as.character(data$range))))
+  
+  output$barchart=renderPlot({
+    req(input$category)
+    data$q5c = as.character(data$q5c)
+    filtered_data <- subset(data, category == input$category) 
+    q5d.table = tabyl(filtered_data, range)
+    
+    ggplot(q5d.table, aes(x=range, y=n, fill=n))+
+      geom_bar(stat="identity")+
+      scale_fill_gradient(low = "#D5B4E6", high = "#4B0082") +
+      theme(axis.text.x = element_text(angle = 90))+
+      xlab("Range of Capital")+
+      ylab("Number of Customers")+
+      ggtitle("Customers Segmentation by Capital Investment and Business Category-",input$category)+
+      theme(plot.title = element_text(size = 18))+
+      geom_text(aes(label=n), vjust=-0.1)+
+      guides(fill = guide_colorbar(title = "No. of Customers"))
+    })
+  #Graph 2: Heatmap:Website Traffic Distribution across Business Categories for Range of views
+  
+  values3 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                        range = "B24:C28", col_names = c("q5","site.category"))
+  data = merge(data,values3,by="q5",all.x=T)
+  values4 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                        range = "B62:C66", col_names = c("q6","visitor.count"))
+  data = merge(data,values4, by="q6",all.x=T)
+  data$visitor.count=ifelse(data$q6==-9,"Don't Know",as.character(data$visitor.count))
+  
+  output$cat.chart = renderPlot({
+    req(input$range.views)
+    new_data <- subset(data, visitor.count == input$range.views)
+      views.table = tabyl(new_data, site.category)
+      
+      ggplot(views.table, aes(x = site.category,y="", fill = n)) +
+        geom_tile(color = "white") + 
+        geom_text(aes(label = n), color = "white", size = 5) +
+        scale_fill_gradient(low = "#F9E0D9", high = "#4B3F72") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+        xlab("Website Category") +
+        ylab("") + 
+        ggtitle(paste("Website Traffic Distribution across Business Categories 
+                      for Range of views-", input$range.views)) +
+        theme(legend.position = "right") +
+        guides(fill = guide_colorbar(title = "No. of Customers"))
+  })
+  #Graph 3: Stacked Bar Chart:Customer Ratings by Hosting Duration
+  
+  values4 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                        range = "B376:C386", col_names = c("q14","rating"))
+  data = merge(data,values4,by="q14",all.x=T)
+  values5 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                        range = "B15:C19", col_names = c("q2","duration"))
+  data = merge(data,values5,by="q2",all.x=T)
+  q2.table= tabyl(data,duration)
+  
+  data$rating.1=ifelse(data$q14==0, "0",
+                       ifelse(data$q14==1, "1",
+                              ifelse(data$q14==2, "2",
+                                     ifelse(data$q14==3,"3",
+                                            ifelse(data$q14==4,"4",
+                                                   ifelse(data$q14==5,"5",
+                                                          ifelse(data$q14==6,"6",
+                                                                 ifelse(data$q14==7,"7",
+                                                                        ifelse(data$q14==8,"8",
+                                                                               ifelse(data$q14==9,"9","10"))))))))))
+  data$rating.1<- as.numeric(data$rating.1)
+  
+  output$ratingchart = renderPlot({
+    req(input$rating)
+    data <- data %>%
+      mutate(rating_category = ifelse(rating.1 >= input$rating, "Above", "Below"))
+    q3_summary <- data %>%
+      group_by(duration, rating_category) %>%
+      summarise(n = n(), .groups = 'drop') %>%
+      group_by(duration) %>%
+      mutate(percent = n / sum(n))
+    print(q3_summary)
+    
+    ggplot(q3_summary, aes(x = duration, y = percent, fill = rating_category)) +
+      geom_bar(stat = "identity", position = "fill") +
+      theme(axis.text.x = element_text(angle = 90)) +
+      xlab("Duration") +
+      ylab("Proportion of Customers") +
+      ggtitle("Customer Ratings by Hosting Duration.Rating-",input$rating) +
+      scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+      scale_fill_manual(values = c("Above" = "#58A4B0", "Below" = "#E6DBD0")) + 
+      geom_text(aes(label = scales::percent(percent, accuracy = 1)), 
+                position = position_fill(vjust = 0.5)) +
+      labs(fill = "Rating Category")
+  })
+  #Graph 4: Bar Chart:Customer Distribution by Business Scope for Business Mode
+  
+  values6 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                      range = "B34:C36", col_names = c("q5b","mode.business"))
+  data$q5b <- as.character(data$q5b)
+  values6$q5b <- as.character(values6$q5b)
+  data = merge(data,values6,by="q5b",all.x=T)
+  data$mode.business=ifelse(data$q5b==-9, "(-9) Don't know",
+                          ifelse(data$q5b==-7, "(-7) Missing",as.character(data$mode.business)))
+  values7 <- read_excel("VF_US_National_JUL19_RawData-1.xlsx", sheet = "Values", 
+                      range = "B107:C111", col_names = c("q9","scope"))
+  data = merge(data,values7,by="q9",all.x=T)
+  data$scope=ifelse(data$q9==-9, "(-9) Don't know",as.character(data$scope))
+  data$scope=ifelse(data$scope=="(1) I'm focused on a small local geographic area (neighborhood)", "(1) Neighborhood",
+                  ifelse(data$scope=="(2) I'm focused on a larger local geographic area (city)", "(2) City",
+                         ifelse(data$scope=="(3) I'm focused on a state, region, or a few states", "(3) Multistate",
+                                ifelse(data$scope=="(4) I'm focused on a national scale (country)","(4) Country",
+                                       ifelse(data$scope=="(5) I'm focused on a global scale (anyone in the world)","(5) Global",
+                                              ifelse(data$scope=="(-9) Don't know","(6) Don't Know","(7) Missing"))))))
+  output$mode.chart = renderPlot({
+  req(input$mode)
+  mode_selected <- gsub("^\\(\\d+\\) ", "", input$mode)
+  data$mode.business <- trimws(as.character(data$mode.business))
+  data$mode.business <- gsub("\\(\\d+\\) ", "", data$mode.business)
+  q4data <- subset(data, mode.business == mode_selected)
+  q4.table <- tabyl(q4data, scope)
+  
+  ggplot(q4.table, aes(x = scope, y = n, fill = scope)) +  
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    xlab("Scope of Business") +
+    ylab("Number of Customers") +
+    ggtitle(paste("Customer Distribution by Business Scope for 
+                  Business Mode-", mode_selected)) +
+    scale_fill_manual(values = c("#4B3F72","#E6DBD0","#58A4B0","#F9E0D9","#644E7E")[1:length(unique(q4.table$scope))]) +  
+    geom_text(aes(label = n), vjust = -0.5) 
+})
+  }
+ 
+shinyApp(ui,server)
