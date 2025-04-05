@@ -3,9 +3,13 @@ Interactive Shiny app built in R to analyze GoDaddy’s microbusiness survey dat
 
 Steps involved:
 -Import and clean raw survey data from Excel in RStudio
+
 -Understand and map survey responses using provided documentation
+
 -Explore key business questions related to investment, website traffic, customer satisfaction, and market reach
+
 -Build a responsive Shiny dashboard with 4–6 components (graphs/tables) based on user input
+
 -Submit reproducible, annotated R code and a two-page summary highlighting data cleaning steps and stakeholder-relevant insights
 
 Question 1: How do capital investment patterns differ across industries, and what insights can be gained for strategic decision-making?
