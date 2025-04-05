@@ -1,6 +1,13 @@
 # Go-Daddy.1
 Interactive Shiny app built in R to analyze GoDaddy’s microbusiness survey data. Visualizes trends in capital investment, customer satisfaction, website traffic, and market reach to support strategic decisions and optimize service offerings.
 
+Steps involved:
+-Import and clean raw survey data from Excel in RStudio
+-Understand and map survey responses using provided documentation
+-Explore key business questions related to investment, website traffic, customer satisfaction, and market reach
+-Build a responsive Shiny dashboard with 4–6 components (graphs/tables) based on user input
+-Submit reproducible, annotated R code and a two-page summary highlighting data cleaning steps and stakeholder-relevant insights
+
 Question 1: How do capital investment patterns differ across industries, and what insights can be gained for strategic decision-making?
 For the first question, I used business categories (Column 5c), which specify the industry in which the customer operates, and the range of capital investment (Column 5d), named as Values1 and Values2, respectively. I merged them with the dataset “data.” In the business category column, any missing values marked as (-7) were labeled as “Missing.” For the range of capital investment column, I renamed some categories as “Don’t know,” “Prefer not to answer,” and “Missing” based on the value descriptions in the dataset. The visualization I created is an interactive graph that has a drop-down option that lets users filter by business category and allows users to analyze how many customers invested within different capital ranges. For businesses with lower capital investment, like startups, GoDaddy can offer affordable shared hosting and easy website builders to help them establish an online presence. Businesses with higher capital investment like tech firms may require dedicated servers, cloud hosting, and advanced security to handle larger operations. Industry-specific needs play a role too—consulting firms may benefit from professional email and client management tools, while e-commerce businesses require fast servers, secure payment gateways, and personalized marketing tools to enhance customer experience and sales.
 ![image](https://github.com/user-attachments/assets/56014f78-7954-47f1-b549-00394a35754a)
